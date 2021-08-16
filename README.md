@@ -13,10 +13,14 @@ Guide / resources on how to use googletest on Platformio and soon other embedded
     - [PlatformIO](#platformio)
   - [Setup](#setup)
     - [Googletest Main File](#googletest-main-file)
-      - [Writing Your First Test](#writing-your-first-test)
-        - [Testing Classes / Methods](#testing-classes--methods)
-        - [Testing Free Function](#testing-free-function)
+  - [Writing Your First Test](#writing-your-first-test)
+    - [Testing Classes / Methods](#testing-classes--methods)
+    - [Testing Free Function](#testing-free-function)
   - [Handy Notes For Writing Testable Code](#handy-notes-for-writing-testable-code)
+    - [Wrapping Calls](#wrapping-calls)
+    - [Writing Tests That Fail](#writing-tests-that-fail)
+    - [Writing Fast Tests](#writing-fast-tests)
+    - [Remember the Strengths of Unit Testing](#remember-the-strengths-of-unit-testing)
 
 ## Why Unit Testing On Embedded Is Important
 Unit testing is extremely common on desktop environments as a way to consistently make sure code behaves the way it is supposed to in all circumstances, even ones that are difficult to reach during normal operation.
@@ -74,14 +78,15 @@ int main(int ac, char* av[]) {
 }
 ```
 
-#### Writing Your First Test
-##### Testing Classes / Methods
+## Writing Your First Test
+### Testing Classes / Methods
 *I bring these up first as most of the time you will be testing with objects (since this is C++ after all).* Testing these use the `TEST_F` macro. I would recommend referring to the googletest documentation for details about the intricacies of it as it requires a separate class for managing the object.
 
-##### Testing Free Function
+### Testing Free Function
 Free function are tested using the `TEST` macro. These are a good way to start out testing and get familiar with the framework.
 
 ## Handy Notes For Writing Testable Code
+### Wrapping Calls
 If you're using the Arduino library (which is usually the case with PlatformIO) wrap any Arduino function calls in wrapper functions. For example instead of writing:
 ```cpp
 void MyFunction() {
@@ -104,8 +109,8 @@ void MyFunction() {
 ```
 and have a header file similar to this:
 ```cpp
-#define UNITTESTINGENABLED // Define when testing on native
-#ifndef UNITTESTINGENABLED
+#define UNIT_TESTING_ENABLED // Define when testing on native (there's a better way to do this I'm just not sure how on PIO)
+#ifndef UNIT_TESTING_ENABLED
   #include "Wire.h"
 
   uint8_t I2CBeginTransmission(uint16_t address) {
@@ -147,6 +152,8 @@ and have a header file similar to this:
 #endif
 ```
 
+As a bonus wrapping 'system' calls in your own functions make it easier to port to other systems and will relieve the headache of refactoring due to name changes or functional changes.
+
 While the above is by no means exhaustive (eg only dealing with 8 bit read/write), it give one way to deal with emulating hardware and capturing a representation of how functions are interacting with the hardware. Note that:
 - No hardware specific header files are included when you are testing (eg `Wire.h`)
   - This is because the computer will most likely not have any idea what to do with hardware manipulation commands
@@ -154,3 +161,12 @@ While the above is by no means exhaustive (eg only dealing with 8 bit read/write
   - Ex: The I2C function that reads a value from hardware instead just returns a value that is set earlier in a test
   - Ex: If you wanted to set a pin to a certain state, have the hardware calls set a boolean variable and check the state of that variable in your test
   - If your function deals with sending many values, it may be easiest to have a FIFO buffer or similar which is filled and cleared as needed
+
+### Writing Tests That Fail
+While not talked about a lot, I think writing a test case that is designed to fail helps provide a small sanity check to make sure the test is not just always returning a success. It is by no means necessary, but could be helpful in some circumstances. *Note that this means writing a failing assert that is related to the function/method itself, not just asserting 0 != 1*
+
+### Writing Fast Tests
+Tests are meant to be run frequently as part of the build process, writing slow tests (meaning slow to execute) may cause people to want to run them less frequently to avoid the slow down.
+
+### Remember the Strengths of Unit Testing
+Unit testing offers the chance to test edge cases, uncommon situations, and unexpected values and conditions, leverage that strength.
